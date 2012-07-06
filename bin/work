@@ -1,0 +1,67 @@
+#!/bin/bash
+
+#config
+file=~/.work.csv
+backupfile=~/backups/work.csv
+
+check_file () {
+    if [ ! -f $file ]
+    then
+        touch $file
+    fi
+    cp $file $backupfile
+}
+
+work_on () {
+    echo "$project,$task,"`date "+%Y-%m-%d %H:%M"`"," >> $file
+}
+
+work_done () {
+    firstdate=`awk -F, '/,$/ { print $3 }' $file`
+    firstsec=`date -j -f "%Y-%m-%d %H:%M" "$firstdate" "+%s"`
+    seconddate=`date "+%Y-%m-%d %H:%M"`
+    secondsec=`date -j -f "%Y-%m-%d %H:%M" "$seconddate" "+%s"`
+    seconds=$(($secondsec - $firstsec))
+    minutes=$(($seconds / 60))
+    if [ $minutes > 60 ]
+    then
+        hr=$(($minutes / 60))
+    else
+        hr=0
+    fi
+    if [ $seconds < 60 ]
+    then
+        mn=$(($minutes % 60))
+    else
+        mn=0
+    fi
+    rounded=`echo "scale=0;15 * ((7.5 + $mn) /15)" | bc`
+    awk -v t="$hr hr $rounded min" '/,$/ {"date \"+%Y-%m-%d %H:%M\""| getline d; $0 = $0 d"," t } {print}' $file > tmpfile
+    mv tmpfile $file
+}
+
+work_catchup () {
+    read -p "Please make an entry with the format 'project,task,yyyy-mm-dd hh:mm,yyyy-mm-dd hh:mm,[x] hr [y] min': " entry
+    echo $entry >> $file
+    sort -t, -k3 $file > tmpfile
+    mv tmpfile $file
+}
+
+work_find () {
+    grep $task $file | sort 
+}
+
+work_projects () {
+    cat $file | cut -d, -f1 | sort | uniq
+}
+
+init () {
+    command="$1"
+    task="$2"
+    project="$3"
+
+    work_$1
+}
+
+check_file
+init "$1" "$2" "$3"
