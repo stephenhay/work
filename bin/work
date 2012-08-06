@@ -47,6 +47,17 @@ work_catchup () {
     mv tmpfile $file
 }
 
+work_report () {
+    read -p "For which project would you like a report? " project
+    echo "Project: " $project
+    grep $project $file \
+        | awk -F\, '{gsub(/ [0-9]{2}:[0-9]{2}/, ""); printf("%s   %-11s   %s\n", $3, $5, $2)}' 
+    grep $project $file \
+        | awk -F\, '{OFS=";"; print $3, $2, $5}' \
+        | awk '{gsub(/ [0-9]{2}:[0-9]{2}/, ""); gsub(/ hr /, ";"); gsub(/ min/, ""); print }' \
+        | awk -F\; '{ tot="Total "; hr+=$3; min+=$4 } END { print tot hr+min/60 " hours" }'
+}
+
 work_find () {
     grep $task $file | sort 
 }
